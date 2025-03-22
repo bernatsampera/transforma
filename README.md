@@ -1,71 +1,118 @@
-# Local Workflow Manager (locwfm)
+# 🔄 Local Workflow Manager (locwfm)
 
-A simple and flexible command-line tool for creating and running data processing workflows locally.
+**Transform, process, and automate your local data workflows with zero setup.**
 
-## Features
+![npm](https://img.shields.io/npm/v/locwfm)
+![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)
 
-- Create standardized workflow structures with a single command
-- Process files using custom transformation scripts
-- Support for multiple file formats (JSON, CSV, text)
-- Automatic file parsing based on file extensions
-- Skip already processed files to avoid duplicates
-- Force reprocessing when needed
-- Custom configuration for input parsing and output formatting
+## 🚀 What is Local Workflow Manager?
 
-## Installation
+LocalWFM is a zero-configuration CLI tool that lets you create standardized data processing pipelines in seconds. Perfect for:
+
+- Data transformation and enrichment
+- JSON processing automation
+- File batch processing
+- ETL pipelines without the complexity
+
+## ✨ Features
+
+- 📁 **Simple CLI commands** to create and run workflows
+- 🔄 **Automatic file handling** for JSON, CSV, and text
+- 🧩 **Customizable transforms** with plain JavaScript
+- 🔍 **Smart file tracking** to avoid duplicate processing
+- 📊 **Standard folder structure** for all your data projects
+
+## 📦 Installation
 
 ```bash
+# Install globally
 npm install -g locwfm
+
+# Verify installation
+wfm --version
 ```
 
-Or install locally:
+## 🏃‍♂️ Quick Start: JSON Processing
 
 ```bash
-npm install locwfm
+# Create a new workflow
+wfm create -n json-processor
+
+# Add your JSON files
+cp your-data.json json-processor/data/input/
+
+# Run the workflow
+wfm run -c json-processor/config/workflow.json
 ```
 
-## Usage
+That's it! Your processed data will be in the `json-processor/data/output` directory.
 
-### Creating a Workflow
+## 🛠️ Customizing Your JSON Workflow
+
+### 1. Create your workflow
 
 ```bash
-wfm create -n my-workflow
+wfm create -n json-processor
 ```
 
-This creates a new workflow with the following structure:
+### 2. Edit the transform script
+
+Open `json-processor/scripts/transform.js` and customize the transformation:
+
+```javascript
+function step1(content, options) {
+  // Add timestamps and additional data
+  if (typeof content === "object" && content !== null) {
+    return {
+      ...content,
+      processed_at: new Date().toISOString(),
+      environment: process.env.NODE_ENV || "development",
+      metadata: {
+        processed_by: "LocalWFM",
+        version: "1.0.0"
+      }
+    };
+  }
+  return content;
+}
+
+module.exports = {step1, default: step1};
+```
+
+### 3. Run your workflow
+
+```bash
+wfm run -c json-processor/config/workflow.json
+```
+
+### 4. Process files repeatedly with the force option
+
+```bash
+wfm run -c json-processor/config/workflow.json -f
+```
+
+## 📂 Workflow Structure
 
 ```
-my-workflow/
+json-processor/
   ├── config/
   │   └── workflow.json    (Workflow configuration)
   ├── data/
-  │   ├── input/           (Place input files here)
-  │   └── output/          (Processed files will appear here)
+  │   ├── input/           (Place JSON files here)
+  │   └── output/          (Processed JSON appears here)
   ├── scripts/
-  │   └── transform.js     (Custom transformation script)
-  └── wfconfig.js          (Custom configuration for file parsing/formatting)
+  │   └── transform.js     (Your custom transformation code)
+  └── wfconfig.js          (Advanced configuration options)
 ```
 
-### Running a Workflow
+## 🛠️ Workflow Configuration
 
-```bash
-wfm run -c my-workflow/config/workflow.json
-```
-
-Use the `-f` or `--force` flag to reprocess all files, even if they've already been processed:
-
-```bash
-wfm run -c my-workflow/config/workflow.json -f
-```
-
-## Workflow Configuration
-
-The `workflow.json` file defines your workflow:
+The `workflow.json` file defines your processing pipeline:
 
 ```json
 {
-  "name": "my-workflow",
-  "description": "Workflow for my-workflow",
+  "name": "json-processor",
+  "description": "Process JSON files",
   "version": "1.0.0",
   "input_dir": "data/input",
   "output_dir": "data/output",
@@ -75,8 +122,8 @@ The `workflow.json` file defines your workflow:
       "type": "transform",
       "function": "scripts/transform.js",
       "options": {
-        "option1": "value1",
-        "option2": "value2"
+        "addTimestamp": true,
+        "environment": "production"
       },
       "skip_existing": true
     }
@@ -84,95 +131,40 @@ The `workflow.json` file defines your workflow:
 }
 ```
 
-### Step Types
+## 🔍 Advanced Features
 
-- `transform`: Use a custom transform function from a JavaScript file
-- `built-in`: Use a built-in function (`toLowerCase`, `toUpperCase`, `template`)
-- `filter`: Pass data through without changes (useful for testing)
+- **Skip already processed files**: Set `skip_existing: true` in your step config
+- **Force reprocessing**: Use the `-f` flag when running the workflow
+- **Custom options**: Pass options to your transform functions through the workflow config
+- **Multiple steps**: Chain multiple transform steps for complex processing
 
-## Custom Transform Scripts
+## 📚 Examples
 
-The transform script uses CommonJS format:
+### Enriching JSON data
 
 ```javascript
 function step1(content, options) {
-  // Transform your data here
-  console.log("Processing with options:", options);
-
-  if (typeof content === "object" && content !== null) {
-    return {
-      ...content,
+  // Add metadata to each item in an array
+  if (Array.isArray(content)) {
+    return content.map((item) => ({
+      ...item,
+      enriched: true,
       processed_at: new Date().toISOString(),
-      processed_by: "LocalWFM"
-    };
+      source: options.source || "unknown"
+    }));
   }
 
-  return content;
+  // Process a single JSON object
+  return {
+    ...content,
+    enriched: true,
+    processed_at: new Date().toISOString()
+  };
 }
 
-module.exports = {
-  step1,
-  default: step1
-};
+module.exports = {step1};
 ```
 
-## Custom Configuration (wfconfig.js)
-
-The `wfconfig.js` file allows you to customize file parsing and formatting:
-
-```javascript
-module.exports = {
-  // Custom input parsers by file extension
-  input: {
-    parsers: {
-      // Custom JSON parser
-      json: (content) => {
-        return JSON.parse(content);
-      },
-
-      // Custom CSV parser
-      csv: (content) => {
-        // CSV parsing logic
-        return parsedData;
-      }
-    }
-  },
-
-  // Custom output formatters by file extension
-  output: {
-    defaultFormat: "json",
-    jsonIndent: 2,
-
-    formatters: {
-      json: (data) => {
-        return JSON.stringify(data, null, 2);
-      },
-
-      csv: (data) => {
-        // CSV formatting logic
-        return formattedData;
-      }
-    }
-  }
-};
-```
-
-## Examples
-
-### Processing JSON Files
-
-1. Create a workflow: `wfm create -n json-processor`
-2. Place JSON files in `json-processor/data/input/`
-3. Customize `json-processor/scripts/transform.js` for your transformation
-4. Run: `wfm run -c json-processor/config/workflow.json`
-
-### Processing CSV Files
-
-1. Create a workflow: `wfm create -n csv-processor`
-2. Place CSV files in `csv-processor/data/input/`
-3. Customize `csv-processor/scripts/transform.js` for CSV transformations
-4. Run: `wfm run -c csv-processor/config/workflow.json`
-
-## License
+## 📄 License
 
 MIT
