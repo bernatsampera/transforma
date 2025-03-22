@@ -109,6 +109,12 @@ async function executeTransformScript(
       
       async function run() {
         try {
+          // Redirect console.log to stderr so it doesn't interfere with our JSON output
+          const originalConsoleLog = console.log;
+          console.log = (...args) => {
+            console.error('LOG:', ...args);
+          };
+          
           // Read input content and options
           const content = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
           const options = JSON.parse(fs.readFileSync(process.argv[3], 'utf8'));
@@ -130,8 +136,11 @@ async function executeTransformScript(
             throw new Error('No valid transform function found');
           }
           
-          // Write the result to stdout
-          console.log(JSON.stringify(result));
+          // Restore original console.log
+          console.log = originalConsoleLog;
+          
+          // Write the result to stdout - this must be the only thing written to stdout
+          process.stdout.write(JSON.stringify(result));
           process.exit(0);
         } catch (error) {
           console.error(error.message);
@@ -165,7 +174,14 @@ async function executeTransformScript(
       });
 
       childProcess.stderr.on("data", (data) => {
-        stderr += data.toString();
+        const message = data.toString();
+        if (message.startsWith("LOG:")) {
+          // This is a redirected console.log from the transform function
+          console.log(`[Transform Log] ${message.substring(4).trim()}`);
+        } else {
+          // This is an actual error
+          stderr += message;
+        }
       });
 
       childProcess.on("close", (code) => {
