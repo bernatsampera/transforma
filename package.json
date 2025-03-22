@@ -46,15 +46,15 @@
     "node": ">=14.0.0"
   },
   "dependencies": {
-    "@types/fs-extra": "^11.0.4",
-    "@types/inquirer": "^8.2.5",
-    "@types/node": "^22.13.11",
     "chalk": "^4.1.2",
     "commander": "^11.1.0",
     "fs-extra": "^11.3.0",
     "inquirer": "^8.2.4"
   },
   "devDependencies": {
+    "@types/fs-extra": "^11.0.4",
+    "@types/inquirer": "^8.2.5",
+    "@types/node": "^22.13.11",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.2"
   }

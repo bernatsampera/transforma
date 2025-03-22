@@ -3,6 +3,9 @@ import path from "path";
 import fs from "fs-extra";
 import {log} from "../utils/logger";
 import {WorkflowConfig, WorkflowStep} from "../types";
+import {createRequire} from "module";
+import {spawn} from "child_process";
+import os from "os";
 
 interface RunOptions {
   config: string;
@@ -76,17 +79,142 @@ const applyBuiltInFunction = (
 };
 
 /**
+ * Execute a transform script using a Node.js child process
+ * This allows us to run both ESM and CommonJS scripts regardless of our own module system
+ */
+async function executeTransformScript(
+  scriptPath: string,
+  content: any,
+  options: Record<string, any> = {}
+): Promise<any> {
+  return new Promise((resolve, reject) => {
+    try {
+      // Create a temporary directory for our executor script and data
+      const tmpDir = path.join(os.tmpdir(), `wfm_${Date.now()}`);
+      fs.ensureDirSync(tmpDir);
+
+      // Write the content to a temp file
+      const contentPath = path.join(tmpDir, "content.json");
+      fs.writeJsonSync(contentPath, content, {spaces: 2});
+
+      // Write the options to a temp file
+      const optionsPath = path.join(tmpDir, "options.json");
+      fs.writeJsonSync(optionsPath, options, {spaces: 2});
+
+      // Create a small executor script that will run the transform
+      const executorPath = path.join(tmpDir, "executor.js");
+      const executorContent = `
+      const fs = require('fs');
+      const path = require('path');
+      
+      async function run() {
+        try {
+          // Read input content and options
+          const content = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+          const options = JSON.parse(fs.readFileSync(process.argv[3], 'utf8'));
+          const scriptPath = process.argv[4];
+          
+          // Dynamically import the transform script (works for both ESM and CommonJS)
+          const transformModule = await import(scriptPath);
+          
+          // Get the transform function
+          const transformFn = transformModule.default || transformModule.step1 || transformModule;
+          
+          // Execute the transform
+          let result;
+          if (typeof transformFn === 'function') {
+            result = await transformFn(content, options);
+          } else if (transformFn && typeof transformFn.step1 === 'function') {
+            result = await transformFn.step1(content, options);
+          } else {
+            throw new Error('No valid transform function found');
+          }
+          
+          // Write the result to stdout
+          console.log(JSON.stringify(result));
+          process.exit(0);
+        } catch (error) {
+          console.error(error.message);
+          process.exit(1);
+        }
+      }
+      
+      run().catch(err => {
+        console.error(err.message);
+        process.exit(1);
+      });
+      `;
+
+      fs.writeFileSync(executorPath, executorContent);
+
+      // Run the executor script with Node.js
+      const scriptAbsPath = path.resolve(scriptPath);
+      const childProcess = spawn("node", [
+        "--input-type=module", // Allow ESM syntax
+        executorPath,
+        contentPath,
+        optionsPath,
+        scriptAbsPath
+      ]);
+
+      let stdout = "";
+      let stderr = "";
+
+      childProcess.stdout.on("data", (data) => {
+        stdout += data.toString();
+      });
+
+      childProcess.stderr.on("data", (data) => {
+        stderr += data.toString();
+      });
+
+      childProcess.on("close", (code) => {
+        // Clean up temp files
+        try {
+          fs.removeSync(tmpDir);
+        } catch (error) {
+          // Ignore cleanup errors
+        }
+
+        if (code === 0) {
+          try {
+            const result = JSON.parse(stdout);
+            resolve(result);
+          } catch (error: any) {
+            reject(
+              new Error(`Failed to parse transform result: ${error.message}`)
+            );
+          }
+        } else {
+          reject(new Error(`Transform script failed: ${stderr}`));
+        }
+      });
+    } catch (error: any) {
+      reject(new Error(`Failed to execute transform script: ${error.message}`));
+    }
+  });
+}
+
+/**
  * Load workflow custom configuration
  */
-const loadWorkflowCustomConfig = (workflowDir: string): any => {
+const loadWorkflowCustomConfig = async (workflowDir: string): Promise<any> => {
   try {
     const configPath = path.join(workflowDir, "wfconfig.js");
+
     if (fs.existsSync(configPath)) {
-      // Clear require cache in case the file was changed
-      delete require.cache[require.resolve(configPath)];
-      const config = require(configPath);
-      log.info(`Loaded custom workflow configuration from ${configPath}`);
-      return config;
+      try {
+        // Use the same child process approach to load wfconfig.js
+        const content = {}; // Empty content for wfconfig
+        const result = await executeTransformScript(configPath, content);
+        log.info(`Loaded custom workflow configuration from ${configPath}`);
+        return result;
+      } catch (error) {
+        log.warn(
+          `Failed to load custom configuration: ${(error as Error).message}`
+        );
+        return {};
+      }
     }
     return {};
   } catch (error) {
@@ -195,7 +323,6 @@ const runWorkflowStep = async (
     // Execute the appropriate function based on the step type
     switch (step.type) {
       case "transform":
-        // Import the transform function from the specified file
         try {
           // First check if the path is relative or absolute
           let functionPath = step.function;
@@ -203,13 +330,12 @@ const runWorkflowStep = async (
             functionPath = path.resolve(workflowDir, functionPath);
           }
 
-          // Clear require cache in case file was changed
-          delete require.cache[require.resolve(functionPath)];
-
-          const transformModule = require(functionPath);
-          const transformFn =
-            transformModule.default || transformModule.step1 || transformModule;
-          result = await transformFn(content, step.options || {});
+          // Execute the transform script in a child process
+          result = await executeTransformScript(
+            functionPath,
+            content,
+            step.options || {}
+          );
         } catch (error) {
           log.error(
             `Failed to execute transform function: ${step.function}`,
@@ -346,7 +472,7 @@ export const runWorkflow = async (options: RunOptions): Promise<void> => {
     const config = loadWorkflowConfig(configPath);
 
     // Load custom configuration if exists
-    const customConfig = loadWorkflowCustomConfig(workflowDir);
+    const customConfig = await loadWorkflowCustomConfig(workflowDir);
 
     // Override skip_existing if force is true
     if (options.force) {
@@ -423,3 +549,55 @@ export const addRunCommand = (program: Command): void => {
       }
     });
 };
+
+/**
+ * Import a module dynamically regardless of whether it's an ES module or CommonJS
+ */
+async function importModule(filepath: string): Promise<any> {
+  // Convert to absolute path
+  const absolutePath = path.resolve(filepath);
+
+  try {
+    // Method 1: Try using pure dynamic import (works for both ESM and CommonJS in modern Node)
+    try {
+      // Dynamic import with URL for ESM modules
+      const fileUrl = `file://${absolutePath}`;
+      const module = await import(fileUrl);
+      return module;
+    } catch (error) {
+      // Method 2: Try direct import
+      try {
+        const module = await import(absolutePath);
+        return module;
+      } catch (directError) {
+        // Method 3: Try using Node's createRequire for CommonJS modules
+        try {
+          const require = createRequire(__filename);
+          // Clear require cache
+          if (require.cache?.[require.resolve(absolutePath)]) {
+            delete require.cache[require.resolve(absolutePath)];
+          }
+          return require(absolutePath);
+        } catch (requireError) {
+          // Method 4: Fallback to eval require
+          try {
+            // Using eval as a last resort
+            const requireFunc = eval("require");
+            return requireFunc(absolutePath);
+          } catch (evalError) {
+            throw new Error(`All import methods failed for ${filepath}`);
+          }
+        }
+      }
+    }
+  } catch (finalError) {
+    // Create a more helpful error
+    throw new Error(
+      `Failed to import module from ${filepath}: ${
+        (finalError as Error).message
+      }\n` +
+        `This might be due to an ESM/CommonJS compatibility issue. If using ES Modules, ` +
+        `make sure your .js files use export/import syntax or rename to .mjs.`
+    );
+  }
+}

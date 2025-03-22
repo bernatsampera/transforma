@@ -12,6 +12,23 @@ export interface CreateOptions {
 }
 
 /**
+ * Detect if the project is using ES modules
+ */
+const isEsmProject = (dir: string): boolean => {
+  try {
+    // Check for package.json
+    const packageJsonPath = path.join(dir, "package.json");
+    if (fs.existsSync(packageJsonPath)) {
+      const packageJson = fs.readJsonSync(packageJsonPath);
+      return packageJson.type === "module";
+    }
+    return false;
+  } catch (error) {
+    return false;
+  }
+};
+
+/**
  * Create a new workflow
  */
 export const createWorkflow = async (options: CreateOptions): Promise<void> => {
@@ -37,6 +54,10 @@ export const createWorkflow = async (options: CreateOptions): Promise<void> => {
     // Create the workflow root directory
     await fs.ensureDir(workflowDir);
 
+    // Check if we're in an ESM project
+    const isEsm = isEsmProject(process.cwd());
+    const transformExtension = isEsm ? ".mjs" : ".js";
+
     // Create standard directories for the workflow
     const workflowConfig: WorkflowConfig = {
       name: workflowName,
@@ -48,7 +69,7 @@ export const createWorkflow = async (options: CreateOptions): Promise<void> => {
         {
           name: "transform",
           type: "transform",
-          function: "scripts/transform.js",
+          function: `scripts/transform${transformExtension}`,
           options: {
             // Default options for the transform function
           },
@@ -74,11 +95,14 @@ export const createWorkflow = async (options: CreateOptions): Promise<void> => {
     const configPath = path.join(workflowDir, "config", "workflow.json");
     saveWorkflowConfig(configPath, workflowConfig);
 
-    // Create a template transform script
-    await createTransformScript(scriptsDir);
+    // Create a template transform script based on module type
+    await createTransformScript(scriptsDir, isEsm);
 
     // Create a wfconfig.js file for custom configuration
     await createCustomConfigFile(workflowDir);
+
+    // Detect module format and show appropriate guidance
+    const moduleFormat = isEsm ? "ES modules (ESM)" : "CommonJS";
 
     log.success(`
 Workflow "${workflowName}" created successfully!
@@ -89,10 +113,12 @@ Directory structure:
     - workflow.json       (Workflow configuration)
   - data/
     - input/              (Place input files here)
-    - output/             (Processed files will be output here)
+    - output/             (Processed files will appear here)
   - scripts/
-    - transform.js        (Transform script with step1 function)
+    - transform${transformExtension}        (Transform script with step1 function)
   - wfconfig.js           (Custom configuration for parsers and formatters)
+
+Detected module format: ${moduleFormat}
 
 To use the workflow:
 1. Place your input files in the data/input directory
@@ -107,62 +133,62 @@ To use the workflow:
 /**
  * Create a template transform script
  */
-const createTransformScript = async (scriptsDir: string): Promise<void> => {
+const createTransformScript = async (
+  scriptsDir: string,
+  isEsm: boolean
+): Promise<void> => {
   try {
-    const scriptPath = path.join(scriptsDir, "transform.js");
+    const templateName = isEsm ? "transform.mjs" : "transform.js";
+    const scriptPath = path.join(scriptsDir, templateName);
 
     // Get the template from our templates directory
-    const templatePath = path.join(
-      __dirname,
-      "..",
-      "templates",
-      "transform.js"
-    );
+    const templatePath = path.join(__dirname, "..", "templates", templateName);
 
     if (fs.existsSync(templatePath)) {
       // Copy the template file
       await fs.copy(templatePath, scriptPath);
     } else {
       // Fallback if template doesn't exist
-      const scriptContent = `/**
- * Transform function for processing input files
+      if (isEsm) {
+        // ESM template
+        const scriptContent = `/**
+ * Transform function for processing files (ESM version)
+ * 
+ * This function will be called for each input file in the workflow.
+ * Customize this function to transform your data as needed.
+ */
+export function step1(content, options) {
+  // Just return the content unchanged
+  // Replace this with your own transformation logic
+  return content;
+}
+
+// Default export for compatibility
+export default step1;
+`;
+        await fs.writeFile(scriptPath, scriptContent);
+      } else {
+        // CommonJS template
+        const scriptContent = `/**
+ * Transform function for processing files
+ * 
+ * This function will be called for each input file in the workflow.
+ * Customize this function to transform your data as needed.
  */
 function step1(content, options) {
-  console.log("Processing content with options:", options);
-  
-  // If content is a string
-  if (typeof content === 'string') {
-    // Example: Replace placeholders with values from options
-    let result = content;
-    Object.entries(options).forEach(([key, value]) => {
-      const placeholder = new RegExp(\`\\{\\{\\s*\${key}\\s*\\}\\}\`, "g");
-      result = result.replace(placeholder, String(value));
-    });
-    return result;
-  }
-  
-  // If content is an object
-  if (typeof content === 'object' && content !== null) {
-    // Example: Return a transformed copy of the object
-    return {
-      ...content,
-      processed_at: new Date().toISOString(),
-      processed_by: "LocalWFM"
-    };
-  }
-  
-  // Default: return content unchanged
+  // Just return the content unchanged
+  // Replace this with your own transformation logic
   return content;
 }
 
 // Export using CommonJS syntax
 module.exports = {
-  step1: step1,
-  // Default for compatibility
+  step1,
   default: step1
 };
 `;
-      await fs.writeFile(scriptPath, scriptContent);
+        await fs.writeFile(scriptPath, scriptContent);
+      }
     }
 
     log.success(`Created transform script: ${scriptPath}`);

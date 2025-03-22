@@ -21,6 +21,7 @@ LocalWFM is a zero-configuration CLI tool that lets you create standardized data
 - 🧩 **Customizable transforms** with plain JavaScript
 - 🔍 **Smart file tracking** to avoid duplicate processing
 - 📊 **Standard folder structure** for all your data projects
+- ⚙️ **Module compatibility** with both CommonJS and ES Modules projects
 
 ## 📦 Installation
 
@@ -46,6 +47,8 @@ wfm run -c json-processor/config/workflow.json
 ```
 
 That's it! Your processed data will be in the `json-processor/data/output` directory.
+
+> **Note**: LocalWFM automatically detects whether your project uses CommonJS or ES Modules and creates the appropriate template files.
 
 ## 🛠️ Customizing Your JSON Workflow
 
