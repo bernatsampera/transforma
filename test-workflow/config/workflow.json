@@ -1,0 +1,16 @@
+{
+  "name": "test-workflow",
+  "description": "Workflow for test-workflow",
+  "version": "1.0.0",
+  "input_dir": "data/input",
+  "output_dir": "data/output",
+  "steps": [
+    {
+      "name": "transform",
+      "type": "transform",
+      "function": "scripts/transform.js",
+      "options": {},
+      "skip_existing": true
+    }
+  ]
+}

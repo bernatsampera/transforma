@@ -1,0 +1,14 @@
+{
+  "name": "test1",
+  "input_dir": "data/input",
+  "output_dir": "data/output",
+  "steps": [
+    {
+      "name": "step1",
+      "type": "transform",
+      "function": "step1",
+      "skip_existing": true
+    }
+  ],
+  "input_format": "single-json"
+}
