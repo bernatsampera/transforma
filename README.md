@@ -19,7 +19,7 @@ npm install -g Transforma
 transforma new clean-data
 
 # Drop your files in clean-data/data/input/
-# Edit clean-data/transform.js:
+# Edit clean-data/transform.ts:
 
 function transform(data) {
   // Remove sensitive fields and add metadata
@@ -40,7 +40,7 @@ That's it! Find your processed files in `clean-data/data/output/` 🎉
 
 ### 1. Clean Customer Data
 ```javascript
-// transform.js - Remove sensitive data and format fields
+// transform.ts - Remove sensitive data and format fields
 function transform(customer) {
   return {
     id: customer.id,
@@ -54,7 +54,7 @@ function transform(customer) {
 
 ### 2. Validate Product Data
 ```javascript
-// transform.js - Ensure all required fields exist
+// transform.ts - Ensure all required fields exist
 function transform(product) {
   // Skip invalid products
   if (!product.sku || !product.price) {
@@ -72,7 +72,7 @@ function transform(product) {
 
 ### 3. Format for Import
 ```javascript
-// transform.js - Prepare data for system import
+// transform.ts - Prepare data for system import
 function transform(record) {
   return {
     externalId: `LEGACY-${record.old_id}`,
@@ -90,7 +90,7 @@ clean-data/              # Your project folder
 ├── data/
 │   ├── input/          # Put your files here
 │   └── output/         # Get processed files here
-├── transform.js        # Your transformation code
+├── transform.ts        # Your transformation code
 └── config.json        # Optional settings
 ```
 
@@ -116,7 +116,7 @@ clean-data/              # Your project folder
     },
     {
       "name": "transform",    // Then transform
-      "file": "transform.js"
+      "file": "transform.ts"
     }
   ]
 }

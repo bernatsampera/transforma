@@ -1,16 +1,16 @@
-Here's how to publish your Local Workflow Manager library and make it available globally:
+Here's how to publish your Transforma library and make it available globally:
 
 ````markdown:README.md
-# 🔄 Local Workflow Manager (transforma)
+# 🔄 Transforma
 
 **Transform, process, and automate your local data workflows with zero setup.**
 
 ![npm](https://img.shields.io/npm/v/transforma)
 ![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)
 
-## 🚀 What is Local Workflow Manager?
+## 🚀 What is Transforma?
 
-Localtransforma is a zero-configuration CLI tool that lets you create standardized data processing pipelines in seconds. Perfect for:
+transforma is a zero-configuration CLI tool that lets you create standardized data processing pipelines in seconds. Perfect for:
 
 - Data transformation and enrichment
 - JSON processing automation
@@ -60,7 +60,7 @@ transforma create -n json-processor
 
 ### 2. Edit the transform script
 
-Open `json-processor/scripts/transform.js` and customize the transformation:
+Open `json-processor/scripts/transform.ts` and customize the transformation:
 
 ```javascript
 function transform(content, options) {
@@ -71,7 +71,7 @@ function transform(content, options) {
       processed_at: new Date().toISOString(),
       environment: process.env.NODE_ENV || "development",
       metadata: {
-        processed_by: "Localtransforma",
+        processed_by: "transforma",
         version: "1.0.0"
       }
     };
@@ -104,7 +104,7 @@ json-processor/
   │   ├── input/           (Place JSON files here)
   │   └── output/          (Processed JSON appears here)
   ├── scripts/
-  │   └── transform.js     (Your custom transformation code)
+  │   └── transform.ts     (Your custom transformation code)
   └── wfconfig.js          (Advanced configuration options)
 ```
 
@@ -173,7 +173,7 @@ module.exports = {transform};
 MIT
 
 ````
-Now let's prepare your library for publication. Here are the steps to publish your Local Workflow Manager to npm:
+Now let's prepare your library for publication. Here are the steps to publish your Transforma to npm:
 
 ## Publishing to npm
 
@@ -183,7 +183,7 @@ Now let's prepare your library for publication. Here are the steps to publish yo
 {
   "name": "transforma",
   "version": "1.0.0",
-  "description": "Local Workflow Manager - Create and run local data processing workflows",
+  "description": "Transforma - Create and run local data processing workflows",
   "main": "dist/index.js",
   "bin": {
     "transforma": "./dist/index.js"
@@ -245,7 +245,7 @@ Now let's prepare your library for publication. Here are the steps to publish yo
 ```plain text:LICENSE
 MIT License
 
-Copyright (c) 2025 Local Workflow Manager Contributors
+Copyright (c) 2025 Transforma Contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -425,4 +425,4 @@ Here's a complete checklist for publishing your package:
 9. 📝 Publish with npm publish
 10. 📝 Verify publication on npmjs.com
 
-Follow these steps and your Localtransforma package will be available for anyone to install and use globally!
+Follow these steps and your transforma package will be available for anyone to install and use globally!

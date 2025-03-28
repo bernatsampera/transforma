@@ -35,7 +35,7 @@ Local Workflow Manager (transforma) addresses a common pain point in data proces
    - Files can be JSON, CSV, or text
 
 4. **Defining Transformations**
-   - Edit `my-workflow/scripts/transform.js`
+   - Edit `my-workflow/scripts/transform.ts`
    - Write plain JavaScript functions
    - Chain multiple steps if needed
 
@@ -110,7 +110,7 @@ function transform(content, options) {
       processed_at: new Date().toISOString(),
       environment: process.env.NODE_ENV || "development",
       metadata: {
-        processed_by: "Localtransforma",
+        processed_by: "transforma",
         version: "1.0.0"
       }
     };
