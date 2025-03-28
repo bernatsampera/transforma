@@ -8,7 +8,7 @@
  * @param {object} options - Options from workflow config
  * @returns {any} - The transformed data
  */
-function step1(content, options) {
+function transform(content, options) {
   // Just return the content unchanged
   // Replace this with your own transformation logic
   return content;
@@ -16,14 +16,14 @@ function step1(content, options) {
 
 // Export using CommonJS syntax (compatible with both CommonJS and ESM projects)
 module.exports = {
-  step1
+  transform
 };
 
 // If you're using ESM (package.json with "type": "module"), use this export instead:
 /*
-export function step1(content, options) {
+export function transform(content, options) {
   return content;
 }
 
-export default step1;
+export default transform;
 */ 

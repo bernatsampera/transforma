@@ -116,14 +116,14 @@ Directory structure:
     - input/              (Place input files here)
     - output/             (Processed files will appear here)
   - scripts/
-    - transform.ts        (Transform script with step1 function)
+    - transform.ts        (Transform script with transform function)
   - wfconfig.ts           (Custom configuration for parsers and formatters)
 
 Detected module format: ${moduleFormat}
 
 To use the workflow:
 1. Place your input files in the data/input directory
-2. Run: ft run ${workflowDir}/transform.js
+2. Run: transforma run -c ${workflowDir}/config/workflow.json
 `);
   } catch (error) {
     log.error("Failed to create workflow", error as Error);
@@ -157,14 +157,14 @@ interface TransformOptions {
   // Add your custom options here
 }
 
-export function step1(content: any, options: TransformOptions = {}): any {
+export function transform(content: any, options: TransformOptions = {}): any {
   // Just return the content unchanged
   // Replace this with your own transformation logic
   return content;
 }
 
 // Default export for compatibility
-export default step1;
+export default transform;
 `;
       await fs.writeFile(scriptPath, scriptContent);
     }

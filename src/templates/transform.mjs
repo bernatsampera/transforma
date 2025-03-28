@@ -8,11 +8,11 @@
  * @param {object} options - Options from workflow config
  * @returns {any} - The transformed data
  */
-export function step1(content, options) {
+export function transform(content, options) {
   // Just return the content unchanged
   // Replace this with your own transformation logic
   return content;
 }
 
 // Default export for compatibility
-export default step1; 
+export default transform; 

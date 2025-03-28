@@ -63,7 +63,7 @@ transforma create -n json-processor
 Open `json-processor/scripts/transform.js` and customize the transformation:
 
 ```javascript
-function step1(content, options) {
+function transform(content, options) {
   // Add timestamps and additional data
   if (typeof content === "object" && content !== null) {
     return {
@@ -79,7 +79,7 @@ function step1(content, options) {
   return content;
 }
 
-module.exports = {step1, default: step1};
+module.exports = {transform, default: transform};
 ```
 
 ### 3. Run your workflow
@@ -123,7 +123,7 @@ The `workflow.json` file defines your processing pipeline:
     {
       "name": "transform",
       "type": "transform",
-      "function": "scripts/transform.js",
+      "function": "scripts/transform.ts",
       "options": {
         "addTimestamp": true,
         "environment": "production"
@@ -146,7 +146,7 @@ The `workflow.json` file defines your processing pipeline:
 ### Enriching JSON data
 
 ```javascript
-function step1(content, options) {
+function transform(content, options) {
   // Add metadata to each item in an array
   if (Array.isArray(content)) {
     return content.map((item) => ({
@@ -165,7 +165,7 @@ function step1(content, options) {
   };
 }
 
-module.exports = {step1};
+module.exports = {transform};
 ```
 
 ## 📄 License

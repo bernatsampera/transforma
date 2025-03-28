@@ -99,7 +99,7 @@ Local Workflow Manager (transforma) addresses a common pain point in data proces
 
 ### 2. Edit the transform script
 
-Open `json-processor/scripts/transform.js` and customize the transformation:
+Open `json-processor/scripts/transform.ts` and customize the transformation:
 
 ```javascript
 function transform(content, options) {

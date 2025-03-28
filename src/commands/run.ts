@@ -126,14 +126,14 @@ async function run() {
     const transformModule = await import(scriptPath);
     
     // Get the transform function
-    const transformFn = transformModule.default || transformModule.step1 || transformModule;
+    const transformFn = transformModule.default || transformModule.transform || transformModule;
     
     // Execute the transform
     let result;
     if (typeof transformFn === 'function') {
       result = await transformFn(content, options);
-    } else if (transformFn && typeof transformFn.step1 === 'function') {
-      result = await transformFn.step1(content, options);
+    } else if (transformFn && typeof transformFn.transform === 'function') {
+      result = await transformFn.transform(content, options);
     } else {
       throw new Error('No valid transform function found');
     }

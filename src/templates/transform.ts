@@ -16,7 +16,7 @@ interface TransformOptions {
  * @param options - Optional parameters from workflow config
  * @returns - The transformed data
  */
-export function step1(content: any, options: TransformOptions = {}): any {
+export function transform(content: any, options: TransformOptions = {}): any {
   // Just return the content unchanged
   // Replace this with your own transformation logic
   return content;
@@ -83,4 +83,4 @@ function transformValue(value: any, options: Record<string, any>): any {
 }
 
 // Default export for compatibility
-export default step1;
+export default transform;

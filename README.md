@@ -16,7 +16,7 @@ Transforma lets you modify JSON/CSV files using simple JavaScript functions - pe
 npm install -g Transforma
 
 # Create a project
-ft new clean-data
+transforma new clean-data
 
 # Drop your files in clean-data/data/input/
 # Edit clean-data/transform.js:
@@ -31,7 +31,7 @@ function transform(data) {
 }
 
 # Process your files
-ft run clean-data
+transforma run clean-data
 ```
 
 That's it! Find your processed files in `clean-data/data/output/` 🎉
@@ -124,7 +124,7 @@ clean-data/              # Your project folder
 
 ### Force Reprocessing
 ```bash
-ft run clean-data --force  # Process all files again
+transforma run clean-data --force  # Process all files again
 ```
 
 ## Need Help? 🆘
