@@ -13,7 +13,7 @@ Transforma lets you modify JSON/CSV files using simple JavaScript functions - pe
 
 ```bash
 # Install
-npm install -g Transforma
+npm install -g transforma
 
 # Create a project
 transforma new clean-data

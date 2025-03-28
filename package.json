@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "type": "module",
   "bin": {
-    "ft": "./dist/index.js"
+    "transforma": "./dist/index.js"
   },
   "files": [
     "dist",
@@ -13,7 +13,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "bun build ./src/index.ts --outdir ./dist --target node",
+    "build": "bun build ./src/index.ts --outdir ./dist --target node --format esm",
     "start": "node ./dist/index.js",
     "dev": "bun run --watch ./src/index.ts",
     "test": "bun test",
@@ -40,9 +40,9 @@
     "url": "https://github.com/bernatsampera/transforma.git"
   },
   "bugs": {
-    "url": "https://github.com/beratsampera/transforma/issues"
+    "url": "https://github.com/bernatsampera/transforma/issues"
   },
-  "homepage": "https://github.com/beratsampera/transforma#readme",
+  "homepage": "https://github.com/bernatsampera/transforma#readme",
   "engines": {
     "bun": ">=1.0.0"
   },
