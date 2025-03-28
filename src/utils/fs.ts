@@ -1,7 +1,7 @@
 import fs from "fs-extra";
 import path from "path";
-import {log} from "./logger";
-import {WorkflowConfig} from "../types";
+import {log} from "./logger.js";
+import {WorkflowConfig} from "../types/index.js";
 
 /**
  * Create directories for a workflow

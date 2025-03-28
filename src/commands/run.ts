@@ -1,11 +1,11 @@
 import {Command} from "commander";
 import path from "path";
 import fs from "fs-extra";
-import {log} from "../utils/logger";
-import {WorkflowConfig, WorkflowStep} from "../types";
-import {createRequire} from "module";
+import {log} from "../utils/logger.js";
+import {WorkflowConfig, WorkflowStep} from "../types/index.js";
 import {spawn} from "child_process";
 import os from "os";
+import chalk from "chalk";
 
 interface RunOptions {
   config: string;
@@ -79,111 +79,113 @@ const applyBuiltInFunction = (
 };
 
 /**
- * Execute a transform script using a Node.js child process
- * This allows us to run both ESM and CommonJS scripts regardless of our own module system
+ * Execute a transform script using Bun
  */
 async function executeTransformScript(
   scriptPath: string,
   content: any,
   options: Record<string, any> = {}
 ): Promise<any> {
-  return new Promise((resolve, reject) => {
-    try {
-      // Create a temporary directory for our executor script and data
-      const tmpDir = path.join(os.tmpdir(), `wfm_${Date.now()}`);
-      fs.ensureDirSync(tmpDir);
+  try {
+    // Create a temporary directory for our executor script and data
+    const tmpDir = path.join(os.tmpdir(), `wfm_${Date.now()}`);
+    fs.ensureDirSync(tmpDir);
 
-      // Write the content to a temp file
-      const contentPath = path.join(tmpDir, "content.json");
-      fs.writeJsonSync(contentPath, content, {spaces: 2});
+    // Write the content to a temp file
+    const contentPath = path.join(tmpDir, "content.json");
+    fs.writeJsonSync(contentPath, content, {spaces: 2});
 
-      // Write the options to a temp file
-      const optionsPath = path.join(tmpDir, "options.json");
-      fs.writeJsonSync(optionsPath, options, {spaces: 2});
+    // Write the options to a temp file
+    const optionsPath = path.join(tmpDir, "options.json");
+    fs.writeJsonSync(optionsPath, options, {spaces: 2});
 
-      // Create a small executor script that will run the transform
-      const executorPath = path.join(tmpDir, "executor.js");
-      const executorContent = `
-      const fs = require('fs');
-      const path = require('path');
-      
-      async function run() {
-        try {
-          // Redirect console.log to stderr so it doesn't interfere with our JSON output
-          const originalConsoleLog = console.log;
-          console.log = (...args) => {
-            console.error('LOG:', ...args);
-          };
-          
-          // Read input content and options
-          const content = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
-          const options = JSON.parse(fs.readFileSync(process.argv[3], 'utf8'));
-          const scriptPath = process.argv[4];
-          
-          // Dynamically import the transform script (works for both ESM and CommonJS)
-          const transformModule = await import(scriptPath);
-          
-          // Get the transform function
-          const transformFn = transformModule.default || transformModule.step1 || transformModule;
-          
-          // Execute the transform
-          let result;
-          if (typeof transformFn === 'function') {
-            result = await transformFn(content, options);
-          } else if (transformFn && typeof transformFn.step1 === 'function') {
-            result = await transformFn.step1(content, options);
-          } else {
-            throw new Error('No valid transform function found');
-          }
-          
-          // Restore original console.log
-          console.log = originalConsoleLog;
-          
-          // Write the result to stdout - this must be the only thing written to stdout
-          process.stdout.write(JSON.stringify(result));
-          process.exit(0);
-        } catch (error) {
-          console.error(error.message);
-          process.exit(1);
-        }
+    // Create a small executor script that will run the transform
+    const executorPath = path.join(tmpDir, "executor.ts");
+    const executorContent = `
+import { readFileSync } from 'fs';
+import { join } from 'path';
+
+interface TransformOptions {
+  [key: string]: any;
+}
+
+async function run() {
+  try {
+    // Redirect console.log to stderr so it doesn't interfere with our JSON output
+    const originalConsoleLog = console.log;
+    console.log = (...args) => {
+      console.error('LOG:', ...args);
+    };
+    
+    // Read input content and options
+    const content = JSON.parse(readFileSync(process.argv[2], 'utf8'));
+    const options = JSON.parse(readFileSync(process.argv[3], 'utf8')) as TransformOptions;
+    const scriptPath = process.argv[4];
+    
+    // Dynamically import the transform script
+    const transformModule = await import(scriptPath);
+    
+    // Get the transform function
+    const transformFn = transformModule.default || transformModule.step1 || transformModule;
+    
+    // Execute the transform
+    let result;
+    if (typeof transformFn === 'function') {
+      result = await transformFn(content, options);
+    } else if (transformFn && typeof transformFn.step1 === 'function') {
+      result = await transformFn.step1(content, options);
+    } else {
+      throw new Error('No valid transform function found');
+    }
+    
+    // Restore original console.log
+    console.log = originalConsoleLog;
+    
+    // Write the result to stdout - this must be the only thing written to stdout
+    process.stdout.write(JSON.stringify(result));
+    process.exit(0);
+  } catch (error) {
+    console.error(error.message);
+    process.exit(1);
+  }
+}
+
+run().catch(err => {
+  console.error(err.message);
+  process.exit(1);
+});
+`;
+
+    fs.writeFileSync(executorPath, executorContent);
+
+    // Run the executor script with Bun
+    const scriptAbsPath = path.resolve(scriptPath);
+    const childProcess = spawn("bun", [
+      executorPath,
+      contentPath,
+      optionsPath,
+      scriptAbsPath
+    ]);
+
+    let stdout = "";
+    let stderr = "";
+
+    childProcess.stdout.on("data", (data) => {
+      stdout += data.toString();
+    });
+
+    childProcess.stderr.on("data", (data) => {
+      const message = data.toString();
+      if (message.startsWith("LOG:")) {
+        // This is a redirected console.log from the transform function
+        console.log(`[Transform Log] ${message.substring(4).trim()}`);
+      } else {
+        // This is an actual error
+        stderr += message;
       }
-      
-      run().catch(err => {
-        console.error(err.message);
-        process.exit(1);
-      });
-      `;
+    });
 
-      fs.writeFileSync(executorPath, executorContent);
-
-      // Run the executor script with Node.js
-      const scriptAbsPath = path.resolve(scriptPath);
-      const childProcess = spawn("node", [
-        "--input-type=module", // Allow ESM syntax
-        executorPath,
-        contentPath,
-        optionsPath,
-        scriptAbsPath
-      ]);
-
-      let stdout = "";
-      let stderr = "";
-
-      childProcess.stdout.on("data", (data) => {
-        stdout += data.toString();
-      });
-
-      childProcess.stderr.on("data", (data) => {
-        const message = data.toString();
-        if (message.startsWith("LOG:")) {
-          // This is a redirected console.log from the transform function
-          console.log(`[Transform Log] ${message.substring(4).trim()}`);
-        } else {
-          // This is an actual error
-          stderr += message;
-        }
-      });
-
+    return new Promise((resolve, reject) => {
       childProcess.on("close", (code) => {
         // Clean up temp files
         try {
@@ -205,10 +207,10 @@ async function executeTransformScript(
           reject(new Error(`Transform script failed: ${stderr}`));
         }
       });
-    } catch (error: any) {
-      reject(new Error(`Failed to execute transform script: ${error.message}`));
-    }
-  });
+    });
+  } catch (error: any) {
+    throw new Error(`Failed to execute transform script: ${error.message}`);
+  }
 }
 
 /**
@@ -288,7 +290,7 @@ const listFiles = (directoryPath: string): string[] => {
 };
 
 /**
- * Run a workflow step on a file
+ * Run a workflow step
  */
 const runWorkflowStep = async (
   filePath: string,
@@ -298,113 +300,35 @@ const runWorkflowStep = async (
   customConfig: any
 ): Promise<void> => {
   try {
-    const fileName = path.basename(filePath);
-    const outputPath = path.join(outputDir, fileName);
+    log.info(`Processing file: ${filePath}`);
+    log.info(`Applying step: ${step.name} (${step.type})`);
 
-    // Skip file if it has already been processed and skip_existing is true
-    if (step.skip_existing && fs.existsSync(outputPath)) {
-      log.warn(`Skipping already processed file: ${fileName}`);
-      return;
-    }
+    // Get file extension
+    const fileExtension = path.extname(filePath).toLowerCase().slice(1);
 
-    log.info(`Processing file: ${fileName} with step: ${step.name}`);
+    // Parse input file
+    const content = parseFileContent(filePath, fileExtension);
 
-    // Read and parse the file content based on file extension
-    let content: any;
-    const fileExtension = path.extname(filePath).toLowerCase();
-
-    // Use custom parsers if available in wfconfig.js
-    if (
-      customConfig?.input?.parsers &&
-      customConfig.input.parsers[fileExtension.substring(1)]
-    ) {
-      try {
-        const rawContent = fs.readFileSync(filePath, "utf-8");
-        content =
-          customConfig.input.parsers[fileExtension.substring(1)](rawContent);
-      } catch (error) {
-        log.error(
-          `Failed to parse with custom parser: ${(error as Error).message}`
-        );
-        // Fallback to default parsing
-        content = parseFileContent(filePath, fileExtension);
-      }
+    // Process the content based on step type
+    let result;
+    if (step.type === "built-in") {
+      result = applyBuiltInFunction(content, step.function, step.options || {});
+    } else if (step.type === "transform") {
+      // Resolve the transform script path relative to the workflow directory
+      const scriptPath = path.resolve(workflowDir, step.function);
+      result = await executeTransformScript(scriptPath, content, step.options || {});
     } else {
-      // Use default parsing based on file extension
-      content = parseFileContent(filePath, fileExtension);
+      throw new Error(`Unsupported step type: ${step.type}`);
     }
 
-    let result: any;
+    // Generate output filename
+    const outputFileName = path.basename(filePath, path.extname(filePath));
+    const outputPath = path.join(outputDir, `${outputFileName}.json`);
 
-    // Execute the appropriate function based on the step type
-    switch (step.type) {
-      case "transform":
-        try {
-          // First check if the path is relative or absolute
-          let functionPath = step.function;
-          if (!path.isAbsolute(functionPath)) {
-            functionPath = path.resolve(workflowDir, functionPath);
-          }
+    // Write output file
+    writeOutputFile(outputPath, result, customConfig);
 
-          // Execute the transform script in a child process
-          result = await executeTransformScript(
-            functionPath,
-            content,
-            step.options || {}
-          );
-        } catch (error) {
-          log.error(
-            `Failed to execute transform function: ${step.function}`,
-            error as Error
-          );
-          throw error;
-        }
-        break;
-
-      case "built-in":
-        // Use a built-in function
-        result = applyBuiltInFunction(
-          content,
-          step.function,
-          step.options || {}
-        );
-        break;
-
-      case "filter":
-        // For filter, we just pass the content unchanged
-        result = content;
-        break;
-
-      default:
-        throw new Error(`Unsupported step type: ${step.type}`);
-    }
-
-    // Write the result to the output file based on format and config
-    if (customConfig?.output?.formatters && typeof result === "object") {
-      const formatter =
-        customConfig.output.formatters[fileExtension.substring(1)] ||
-        customConfig.output.formatters[customConfig.output.defaultFormat];
-
-      if (formatter) {
-        try {
-          // Use custom formatter
-          const formattedResult = formatter(result);
-          fs.writeFileSync(outputPath, formattedResult);
-        } catch (error) {
-          log.error(
-            `Failed to use custom formatter: ${(error as Error).message}`
-          );
-          // Fallback to default formatting
-          writeOutputFile(outputPath, result, customConfig);
-        }
-      } else {
-        writeOutputFile(outputPath, result, customConfig);
-      }
-    } else {
-      writeOutputFile(outputPath, result, customConfig);
-    }
-
-    log.success(`Successfully processed ${fileName}`);
+    log.success(`Processed file: ${filePath} -> ${outputPath}`);
   } catch (error) {
     log.error(`Failed to process file: ${filePath}`, error as Error);
     throw error;
@@ -412,44 +336,41 @@ const runWorkflowStep = async (
 };
 
 /**
- * Parse file content based on extension
+ * Parse file content based on file extension
  */
 const parseFileContent = (filePath: string, fileExtension: string): any => {
   try {
+    const content = fs.readFileSync(filePath, "utf8");
+
     switch (fileExtension) {
-      case ".json":
-        return JSON.parse(fs.readFileSync(filePath, "utf-8"));
-
-      case ".csv":
-        // Simple CSV parsing
-        const csvContent = fs.readFileSync(filePath, "utf-8");
-        const lines = csvContent.split("\n").filter((line) => line.trim());
-
-        if (lines.length > 0) {
-          const headers = lines[0].split(",").map((h) => h.trim());
-          return lines.slice(1).map((line) => {
-            const values = line.split(",");
-            const row: Record<string, string> = {};
-            headers.forEach((header, index) => {
-              row[header] = values[index]?.trim() || "";
-            });
-            return row;
+      case "json":
+        return JSON.parse(content);
+      case "csv":
+        // Simple CSV parsing - can be enhanced with a CSV library
+        const lines = content.split("\n").filter((line) => line.trim());
+        if (lines.length === 0) return [];
+        const headers = lines[0].split(",").map((h) => h.trim());
+        return lines.slice(1).map((line) => {
+          const values = line.split(",").map((v) => v.trim());
+          const row: Record<string, string> = {};
+          headers.forEach((header, index) => {
+            row[header] = values[index] || "";
           });
-        }
-        return [];
-
+          return row;
+        });
       default:
-        // For any other file type, return as text
-        return fs.readFileSync(filePath, "utf-8");
+        return content;
     }
   } catch (error) {
-    log.error(`Failed to parse file ${filePath}: ${(error as Error).message}`);
-    return fs.readFileSync(filePath, "utf-8"); // Fallback to raw content
+    log.error(
+      `Failed to parse file ${filePath}: ${(error as Error).message}`
+    );
+    throw error;
   }
 };
 
 /**
- * Write output file based on content type and config
+ * Write output file with appropriate formatting
  */
 const writeOutputFile = (
   outputPath: string,
@@ -457,163 +378,100 @@ const writeOutputFile = (
   customConfig: any
 ): void => {
   try {
-    if (typeof content === "object" && content !== null) {
-      // For objects/arrays, write as JSON
-      fs.writeJsonSync(outputPath, content, {
-        spaces: customConfig?.output?.jsonIndent || 2
-      });
+    const outputFormat = customConfig.output?.defaultFormat || "json";
+    const formatter = customConfig.output?.formatters?.[outputFormat];
+
+    let outputContent: string;
+    if (formatter) {
+      outputContent = formatter(content);
     } else {
-      // For strings or other types, write as is
-      fs.writeFileSync(outputPath, String(content));
+      // Default to pretty JSON
+      outputContent = JSON.stringify(content, null, 2);
     }
+
+    fs.ensureDirSync(path.dirname(outputPath));
+    fs.writeFileSync(outputPath, outputContent);
   } catch (error) {
-    log.error(`Failed to write output file: ${(error as Error).message}`);
+    log.error(
+      `Failed to write output file ${outputPath}: ${(error as Error).message}`
+    );
     throw error;
   }
 };
 
 /**
- * Run the workflow
+ * Run a workflow
  */
 export const runWorkflow = async (options: RunOptions): Promise<void> => {
   try {
-    const configPath = options.config || "config/workflow.json";
-
-    // Get the workflow directory (parent of the config directory)
-    const workflowDir = path.dirname(
-      path.dirname(path.resolve(process.cwd(), configPath))
-    );
-
     // Load workflow configuration
-    const config = loadWorkflowConfig(configPath);
+    const config = loadWorkflowConfig(options.config);
+    const configDir = path.dirname(path.resolve(process.cwd(), options.config));
+    const workflowDir = path.dirname(configDir); // Go up one level from config directory
 
-    // Load custom configuration if exists
-    const customConfig = await loadWorkflowCustomConfig(workflowDir);
-
-    // Override skip_existing if force is true
-    if (options.force) {
-      config.steps.forEach((step) => {
-        if (step.skip_existing) {
-          log.warn(
-            `Force option enabled, disabling skip_existing for step: ${step.name}`
-          );
-          step.skip_existing = false;
-        }
-      });
-    }
-
-    // Resolve paths relative to the workflow directory
+    // Resolve input and output directories relative to the workflow directory
     const inputDir = path.resolve(workflowDir, config.input_dir);
     const outputDir = path.resolve(workflowDir, config.output_dir);
 
-    log.info(`Using workflow directory: ${workflowDir}`);
-    log.info(`Using input directory: ${inputDir}`);
-    log.info(`Using output directory: ${outputDir}`);
+    // Load custom configuration if available
+    const customConfig = await loadWorkflowCustomConfig(workflowDir);
 
-    // Ensure output directory exists
-    fs.ensureDirSync(outputDir);
-
-    // List files in the input directory
+    // Get input files
     const inputFiles = listFiles(inputDir);
 
     if (inputFiles.length === 0) {
-      log.warn(`No files found in input directory: ${inputDir}`);
+      log.warning("No input files found in the input directory");
       return;
     }
 
-    log.info(`Found ${inputFiles.length} files to process`);
-
-    // Process each file through each step
+    // Process each input file
     for (const filePath of inputFiles) {
-      for (const step of config.steps) {
-        await runWorkflowStep(
-          filePath,
-          step,
-          workflowDir,
-          outputDir,
-          customConfig
-        );
+      try {
+        // Skip if output already exists and force is not set
+        const outputFileName = path.basename(filePath, path.extname(filePath));
+        const outputPath = path.join(outputDir, `${outputFileName}.json`);
+
+        if (fs.existsSync(outputPath) && !options.force) {
+          log.warning(
+            `Output file already exists: ${outputPath}. Use --force to overwrite.`
+          );
+          continue;
+        }
+
+        // Run each step in sequence
+        for (const step of config.steps) {
+          await runWorkflowStep(filePath, step, workflowDir, outputDir, customConfig);
+        }
+      } catch (error) {
+        log.error(`Failed to process file: ${filePath}`, error as Error);
+        if (!options.force) {
+          throw error;
+        }
       }
     }
 
-    log.success(
-      `Workflow completed successfully (${inputFiles.length} files processed)`
-    );
+    log.success("Workflow completed successfully!");
   } catch (error) {
-    log.error("Failed to run workflow", error as Error);
+    log.error("Workflow failed", error as Error);
     throw error;
   }
 };
 
 /**
- * Add the run command to the program
+ * Add the run command to the CLI program
  */
 export const addRunCommand = (program: Command): void => {
   program
     .command("run")
     .description("Run a workflow")
-    .option("-c, --config <path>", "Path to the workflow configuration file")
-    .option(
-      "-f, --force",
-      "Force processing of all files, even if they have already been processed"
-    )
-    .action(async (options) => {
+    .requiredOption("-c, --config <path>", "Path to workflow configuration file")
+    .option("-f, --force", "Force overwrite of existing output files")
+    .action(async (options: RunOptions) => {
       try {
         await runWorkflow(options);
       } catch (error) {
+        console.error(chalk.red("Error:"), (error as Error).message);
         process.exit(1);
       }
     });
 };
-
-/**
- * Import a module dynamically regardless of whether it's an ES module or CommonJS
- */
-async function importModule(filepath: string): Promise<any> {
-  // Convert to absolute path
-  const absolutePath = path.resolve(filepath);
-
-  try {
-    // Method 1: Try using pure dynamic import (works for both ESM and CommonJS in modern Node)
-    try {
-      // Dynamic import with URL for ESM modules
-      const fileUrl = `file://${absolutePath}`;
-      const module = await import(fileUrl);
-      return module;
-    } catch (error) {
-      // Method 2: Try direct import
-      try {
-        const module = await import(absolutePath);
-        return module;
-      } catch (directError) {
-        // Method 3: Try using Node's createRequire for CommonJS modules
-        try {
-          const require = createRequire(__filename);
-          // Clear require cache
-          if (require.cache?.[require.resolve(absolutePath)]) {
-            delete require.cache[require.resolve(absolutePath)];
-          }
-          return require(absolutePath);
-        } catch (requireError) {
-          // Method 4: Fallback to eval require
-          try {
-            // Using eval as a last resort
-            const requireFunc = eval("require");
-            return requireFunc(absolutePath);
-          } catch (evalError) {
-            throw new Error(`All import methods failed for ${filepath}`);
-          }
-        }
-      }
-    }
-  } catch (finalError) {
-    // Create a more helpful error
-    throw new Error(
-      `Failed to import module from ${filepath}: ${
-        (finalError as Error).message
-      }\n` +
-        `This might be due to an ESM/CommonJS compatibility issue. If using ES Modules, ` +
-        `make sure your .js files use export/import syntax or rename to .mjs.`
-    );
-  }
-}

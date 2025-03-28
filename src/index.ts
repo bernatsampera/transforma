@@ -1,8 +1,8 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 
 import {Command} from "commander";
-import {addCreateCommand} from "./commands/create";
-import {addRunCommand} from "./commands/run";
+import {addCreateCommand} from "./commands/create.js";
+import {addRunCommand} from "./commands/run.js";
 import chalk from "chalk";
 
 const program = new Command();
@@ -18,6 +18,9 @@ program
 // Add commands
 addCreateCommand(program);
 addRunCommand(program);
+
+// Debug: Log arguments
+console.log('Process arguments:', process.argv);
 
 // Show help by default if no arguments
 if (process.argv.length < 3) {

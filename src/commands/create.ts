@@ -2,9 +2,10 @@ import {Command} from "commander";
 import inquirer from "inquirer";
 import path from "path";
 import fs from "fs-extra";
-import {log} from "../utils/logger";
-import {WorkflowConfig, WorkflowStep} from "../types";
-import {createDirectories, saveWorkflowConfig} from "../utils/fs";
+import {log} from "../utils/logger.js";
+import {WorkflowConfig, WorkflowStep} from "../types/index.js";
+import {createDirectories, saveWorkflowConfig} from "../utils/fs.js";
+import chalk from "chalk";
 
 export interface CreateOptions {
   name?: string;
@@ -69,7 +70,7 @@ export const createWorkflow = async (options: CreateOptions): Promise<void> => {
         {
           name: "transform",
           type: "transform",
-          function: `scripts/transform${transformExtension}`,
+          function: "scripts/transform.ts",
           options: {
             // Default options for the transform function
           },
@@ -95,10 +96,10 @@ export const createWorkflow = async (options: CreateOptions): Promise<void> => {
     const configPath = path.join(workflowDir, "config", "workflow.json");
     saveWorkflowConfig(configPath, workflowConfig);
 
-    // Create a template transform script based on module type
-    await createTransformScript(scriptsDir, isEsm);
+    // Create a template transform script
+    await createTransformScript(scriptsDir);
 
-    // Create a wfconfig.js file for custom configuration
+    // Create a wfconfig.ts file for custom configuration
     await createCustomConfigFile(workflowDir);
 
     // Detect module format and show appropriate guidance
@@ -115,8 +116,8 @@ Directory structure:
     - input/              (Place input files here)
     - output/             (Processed files will appear here)
   - scripts/
-    - transform${transformExtension}        (Transform script with step1 function)
-  - wfconfig.js           (Custom configuration for parsers and formatters)
+    - transform.ts        (Transform script with step1 function)
+  - wfconfig.ts           (Custom configuration for parsers and formatters)
 
 Detected module format: ${moduleFormat}
 
@@ -133,31 +134,30 @@ To use the workflow:
 /**
  * Create a template transform script
  */
-const createTransformScript = async (
-  scriptsDir: string,
-  isEsm: boolean
-): Promise<void> => {
+const createTransformScript = async (scriptsDir: string): Promise<void> => {
   try {
-    const templateName = isEsm ? "transform.mjs" : "transform.js";
-    const scriptPath = path.join(scriptsDir, templateName);
+    const scriptPath = path.join(scriptsDir, "transform.ts");
 
     // Get the template from our templates directory
-    const templatePath = path.join(__dirname, "..", "templates", templateName);
+    const templatePath = path.join(__dirname, "..", "templates", "transform.ts");
 
     if (fs.existsSync(templatePath)) {
       // Copy the template file
       await fs.copy(templatePath, scriptPath);
     } else {
       // Fallback if template doesn't exist
-      if (isEsm) {
-        // ESM template
-        const scriptContent = `/**
- * Transform function for processing files (ESM version)
+      const scriptContent = `/**
+ * Transform function for processing files
  * 
  * This function will be called for each input file in the workflow.
  * Customize this function to transform your data as needed.
  */
-export function step1(content, options) {
+
+interface TransformOptions {
+  // Add your custom options here
+}
+
+export function step1(content: any, options: TransformOptions = {}): any {
   // Just return the content unchanged
   // Replace this with your own transformation logic
   return content;
@@ -166,29 +166,7 @@ export function step1(content, options) {
 // Default export for compatibility
 export default step1;
 `;
-        await fs.writeFile(scriptPath, scriptContent);
-      } else {
-        // CommonJS template
-        const scriptContent = `/**
- * Transform function for processing files
- * 
- * This function will be called for each input file in the workflow.
- * Customize this function to transform your data as needed.
- */
-function step1(content, options) {
-  // Just return the content unchanged
-  // Replace this with your own transformation logic
-  return content;
-}
-
-// Export using CommonJS syntax
-module.exports = {
-  step1,
-  default: step1
-};
-`;
-        await fs.writeFile(scriptPath, scriptContent);
-      }
+      await fs.writeFile(scriptPath, scriptContent);
     }
 
     log.success(`Created transform script: ${scriptPath}`);
@@ -203,10 +181,10 @@ module.exports = {
  */
 const createCustomConfigFile = async (workflowDir: string): Promise<void> => {
   try {
-    const configPath = path.join(workflowDir, "wfconfig.js");
+    const configPath = path.join(workflowDir, "wfconfig.ts");
 
     // Get the template from our templates directory
-    const templatePath = path.join(__dirname, "..", "templates", "wfconfig.js");
+    const templatePath = path.join(__dirname, "..", "templates", "wfconfig.ts");
 
     if (fs.existsSync(templatePath)) {
       // Copy the template file
@@ -216,12 +194,31 @@ const createCustomConfigFile = async (workflowDir: string): Promise<void> => {
       const configContent = `/**
  * Workflow Custom Configuration
  */
-module.exports = {
+
+interface CustomConfig {
+  input: {
+    parsers: {
+      [key: string]: (content: string) => any;
+    };
+  };
+  output: {
+    defaultFormat: string;
+    jsonIndent: number;
+    formatters: {
+      [key: string]: (data: any) => string;
+    };
+  };
+  options: {
+    transform: Record<string, any>;
+  };
+}
+
+const config: CustomConfig = {
   // Custom input parsers by file extension
   input: {
     parsers: {
       // Example custom JSON parser
-      json: (content) => {
+      json: (content: string) => {
         return JSON.parse(content);
       },
     }
@@ -237,7 +234,7 @@ module.exports = {
     
     formatters: {
       // Pretty JSON formatter
-      json: (data) => {
+      json: (data: any) => {
         return JSON.stringify(data, null, 2);
       },
     }
@@ -250,7 +247,10 @@ module.exports = {
       // Add your default options here
     }
   }
-};`;
+};
+
+export default config;
+`;
       await fs.writeFile(configPath, configContent);
     }
 
@@ -264,7 +264,7 @@ module.exports = {
 };
 
 /**
- * Add the create command to the program
+ * Add the create command to the CLI program
  */
 export const addCreateCommand = (program: Command): void => {
   program
@@ -272,10 +272,11 @@ export const addCreateCommand = (program: Command): void => {
     .description("Create a new workflow")
     .option("-n, --name <name>", "Name of the workflow")
     .option("-d, --dir <directory>", "Directory to create the workflow in")
-    .action(async (options) => {
+    .action(async (options: CreateOptions) => {
       try {
         await createWorkflow(options);
       } catch (error) {
+        console.error(chalk.red("Error:"), (error as Error).message);
         process.exit(1);
       }
     });

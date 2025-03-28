@@ -1,7 +1,7 @@
 import fs from "fs-extra";
 import path from "path";
-import {log} from "./logger";
-import {FunctionRegistry} from "../types";
+import {log} from "./logger.js";
+import {FunctionRegistry} from "../types/index.js";
 
 /**
  * Built-in parsing functions
@@ -251,10 +251,8 @@ export const buildFunctionRegistry = (): FunctionRegistry => {
  */
 export const getAvailableFunctions = () => {
   return {
-    parse: Object.keys(parsers),
-    transform: Object.keys(transformers),
-    save: Object.keys(savers),
-    filter: ["filter"],
-    "built-in": ["toUpperCase", "toLowerCase", "template"]
+    parsers: Object.keys(parsers),
+    transformers: Object.keys(transformers),
+    savers: Object.keys(savers)
   };
 };

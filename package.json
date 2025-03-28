@@ -12,15 +12,15 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsc && ./copy-templates.sh",
-    "start": "node dist/index.js",
-    "dev": "ts-node src/index.ts",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "prepublishOnly": "npm run build",
-    "link": "npm link",
-    "version:patch": "npm version patch",
-    "version:minor": "npm version minor",
-    "version:major": "npm version major"
+    "build": "bun build ./src/index.ts --outdir ./dist --target node",
+    "start": "node ./dist/index.js",
+    "dev": "bun run --watch ./src/index.ts",
+    "test": "bun test",
+    "prepublishOnly": "bun run build",
+    "link": "bun link",
+    "version:patch": "bun version patch",
+    "version:minor": "bun version minor",
+    "version:major": "bun version major"
   },
   "keywords": [
     "workflow",
@@ -43,10 +43,10 @@
   },
   "homepage": "https://github.com/beratsampera/locwfm#readme",
   "engines": {
-    "node": ">=14.0.0"
+    "bun": ">=1.0.0"
   },
   "dependencies": {
-    "chalk": "^4.1.2",
+    "chalk": "^5.3.0",
     "commander": "^11.1.0",
     "fs-extra": "^11.3.0",
     "inquirer": "^8.2.4"
@@ -54,8 +54,7 @@
   "devDependencies": {
     "@types/fs-extra": "^11.0.4",
     "@types/inquirer": "^8.2.5",
-    "@types/node": "^22.13.11",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.8.2"
+    "bun-types": "latest",
+    "typescript": "^5.3.3"
   }
 }
