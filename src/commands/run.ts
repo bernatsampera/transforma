@@ -88,7 +88,7 @@ async function executeTransformScript(
 ): Promise<any> {
   try {
     // Create a temporary directory for our executor script and data
-    const tmpDir = path.join(os.tmpdir(), `wfm_${Date.now()}`);
+    const tmpDir = path.join(os.tmpdir(), `transforma_${Date.now()}`);
     fs.ensureDirSync(tmpDir);
 
     // Write the content to a temp file

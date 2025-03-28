@@ -9,7 +9,7 @@ const program = new Command();
 
 // Define the CLI
 program
-  .name("wfm")
+  .name("ft")
   .description(
     "Local Workflow Manager - Create and run local data processing workflows"
   )
@@ -24,7 +24,7 @@ console.log('Process arguments:', process.argv);
 
 // Show help by default if no arguments
 if (process.argv.length < 3) {
-  console.log(chalk.blue("Local Workflow Manager (locwfm) 📊"));
+  console.log(chalk.blue("Transforma 📊"));
   console.log(chalk.gray("Create and run local data processing workflows\n"));
   program.help();
 }

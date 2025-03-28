@@ -123,7 +123,7 @@ Detected module format: ${moduleFormat}
 
 To use the workflow:
 1. Place your input files in the data/input directory
-2. Run: wfm run -c ${workflowDir}/config/workflow.json
+2. Run: ft run ${workflowDir}/transform.js
 `);
   } catch (error) {
     log.error("Failed to create workflow", error as Error);

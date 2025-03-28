@@ -29,7 +29,7 @@ export const log = {
     const logsDir = createLogsDir();
     const logFile = path.join(
       logsDir,
-      `wfm-${new Date().toISOString().split("T")[0]}.log`
+      `ft-${new Date().toISOString().split("T")[0]}.log`
     );
     fs.appendFileSync(logFile, formattedMessage + "\n");
   },
@@ -45,7 +45,7 @@ export const log = {
     const logsDir = createLogsDir();
     const logFile = path.join(
       logsDir,
-      `wfm-${new Date().toISOString().split("T")[0]}.log`
+      `ft-${new Date().toISOString().split("T")[0]}.log`
     );
     fs.appendFileSync(logFile, formattedMessage + "\n");
   },
@@ -65,7 +65,7 @@ export const log = {
     const logsDir = createLogsDir();
     const logFile = path.join(
       logsDir,
-      `wfm-${new Date().toISOString().split("T")[0]}.log`
+      `ft-${new Date().toISOString().split("T")[0]}.log`
     );
     fs.appendFileSync(logFile, formattedMessage + "\n");
   },
@@ -95,7 +95,7 @@ export const log = {
     const logsDir = createLogsDir();
     const logFile = path.join(
       logsDir,
-      `wfm-${new Date().toISOString().split("T")[0]}.log`
+      `ft-${new Date().toISOString().split("T")[0]}.log`
     );
     fs.appendFileSync(logFile, formattedMessage + "\n");
   }

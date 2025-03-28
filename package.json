@@ -1,10 +1,10 @@
 {
-  "name": "locwfm",
+  "name": "transforma",
   "version": "1.0.0",
-  "description": "Local Workflow Manager - Create and run local data processing workflows",
+  "description": "Transform files with simple JavaScript - no setup required",
   "main": "dist/index.js",
   "bin": {
-    "wfm": "./dist/index.js"
+    "ft": "./dist/index.js"
   },
   "files": [
     "dist",
@@ -36,12 +36,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/bernatsampera/locwfm.git"
+    "url": "https://github.com/bernatsampera/transforma.git"
   },
   "bugs": {
-    "url": "https://github.com/beratsampera/locwfm/issues"
+    "url": "https://github.com/beratsampera/transforma/issues"
   },
-  "homepage": "https://github.com/beratsampera/locwfm#readme",
+  "homepage": "https://github.com/beratsampera/transforma#readme",
   "engines": {
     "bun": ">=1.0.0"
   },

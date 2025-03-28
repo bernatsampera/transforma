@@ -1,16 +1,16 @@
 Here's how to publish your Local Workflow Manager library and make it available globally:
 
 ````markdown:README.md
-# 🔄 Local Workflow Manager (locwfm)
+# 🔄 Local Workflow Manager (transforma)
 
 **Transform, process, and automate your local data workflows with zero setup.**
 
-![npm](https://img.shields.io/npm/v/locwfm)
+![npm](https://img.shields.io/npm/v/transforma)
 ![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)
 
 ## 🚀 What is Local Workflow Manager?
 
-LocalWFM is a zero-configuration CLI tool that lets you create standardized data processing pipelines in seconds. Perfect for:
+Localtransforma is a zero-configuration CLI tool that lets you create standardized data processing pipelines in seconds. Perfect for:
 
 - Data transformation and enrichment
 - JSON processing automation
@@ -29,23 +29,23 @@ LocalWFM is a zero-configuration CLI tool that lets you create standardized data
 
 ```bash
 # Install globally
-npm install -g locwfm
+npm install -g transforma
 
 # Verify installation
-wfm --version
+transforma --version
 ````
 
 ## 🏃‍♂️ Quick Start: JSON Processing
 
 ```bash
 # Create a new workflow
-wfm create -n json-processor
+transforma create -n json-processor
 
 # Add your JSON files
 cp your-data.json json-processor/data/input/
 
 # Run the workflow
-wfm run -c json-processor/config/workflow.json
+transforma run -c json-processor/config/workflow.json
 ```
 
 That's it! Your processed data will be in the `json-processor/data/output` directory.
@@ -55,7 +55,7 @@ That's it! Your processed data will be in the `json-processor/data/output` direc
 ### 1. Create your workflow
 
 ```bash
-wfm create -n json-processor
+transforma create -n json-processor
 ```
 
 ### 2. Edit the transform script
@@ -71,7 +71,7 @@ function step1(content, options) {
       processed_at: new Date().toISOString(),
       environment: process.env.NODE_ENV || "development",
       metadata: {
-        processed_by: "LocalWFM",
+        processed_by: "Localtransforma",
         version: "1.0.0"
       }
     };
@@ -85,13 +85,13 @@ module.exports = {step1, default: step1};
 ### 3. Run your workflow
 
 ```bash
-wfm run -c json-processor/config/workflow.json
+transforma run -c json-processor/config/workflow.json
 ```
 
 ### 4. Process files repeatedly with the force option
 
 ```bash
-wfm run -c json-processor/config/workflow.json -f
+transforma run -c json-processor/config/workflow.json -f
 ```
 
 ## 📂 Workflow Structure
@@ -181,12 +181,12 @@ Now let's prepare your library for publication. Here are the steps to publish yo
 
 ```json:package.json
 {
-  "name": "locwfm",
+  "name": "transforma",
   "version": "1.0.0",
   "description": "Local Workflow Manager - Create and run local data processing workflows",
   "main": "dist/index.js",
   "bin": {
-    "wfm": "./dist/index.js"
+    "transforma": "./dist/index.js"
   },
   "files": [
     "dist",
@@ -215,12 +215,12 @@ Now let's prepare your library for publication. Here are the steps to publish yo
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/locwfm.git"
+    "url": "https://github.com/yourusername/transforma.git"
   },
   "bugs": {
-    "url": "https://github.com/yourusername/locwfm/issues"
+    "url": "https://github.com/yourusername/transforma/issues"
   },
-  "homepage": "https://github.com/yourusername/locwfm#readme",
+  "homepage": "https://github.com/yourusername/transforma#readme",
   "engines": {
     "node": ">=14.0.0"
   },
@@ -330,17 +330,17 @@ If this is your first time publishing this package name, it should succeed. If t
 
 5. **Verify your package is published:**
 
-Visit https://www.npmjs.com/package/locwfm (replace 'locwfm' with your actual package name if you changed it)
+Visit https://www.npmjs.com/package/transforma (replace 'transforma' with your actual package name if you changed it)
 
 ## Using Your Package Globally
 
 Once published, anyone can install and use your package globally:
 
 ```bash
-npm install -g locwfm
+npm install -g transforma
 ```
 
-This will make the `wfm` command available from any directory on their system.
+This will make the `transforma` command available from any directory on their system.
 
 ## Using Your Package in a Project
 
@@ -348,17 +348,17 @@ To use your package in a specific project:
 
 ```bash
 # Inside the project directory
-npm install locwfm --save
+npm install transforma --save
 ```
 
 Then in their Node.js code:
 
 ```javascript
 // Using CommonJS
-const locwfm = require("locwfm");
+const transforma = require("transforma");
 
 // Or using ES modules
-import locwfm from "locwfm";
+import transforma from "transforma";
 ```
 
 ## Testing Your Package Locally Before Publishing
@@ -373,10 +373,10 @@ npm link
 
 2. **Test the linked package:**
 
-Now you can use the `wfm` command from anywhere in your system:
+Now you can use the `transforma` command from anywhere in your system:
 
 ```bash
-wfm --version
+transforma --version
 ```
 
 ## Updating Your Package
@@ -425,4 +425,4 @@ Here's a complete checklist for publishing your package:
 9. 📝 Publish with npm publish
 10. 📝 Verify publication on npmjs.com
 
-Follow these steps and your LocalWFM package will be available for anyone to install and use globally!
+Follow these steps and your Localtransforma package will be available for anyone to install and use globally!

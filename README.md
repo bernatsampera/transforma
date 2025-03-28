@@ -1,173 +1,138 @@
-# 🔄 Local Workflow Manager (locwfm)
+# 🔄 Transforma
 
-**Transform, process, and automate your local data workflows with zero setup.**
+**Transform your files with simple JavaScript - no setup required**
 
-![npm](https://img.shields.io/npm/v/locwfm)
+![npm](https://img.shields.io/npm/v/Transforma)
 ![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)
 
-## 🚀 What is Local Workflow Manager?
+## In One Sentence 🎯
 
-LocalWFM is a zero-configuration CLI tool that lets you create standardized data processing pipelines in seconds. Perfect for:
+Transforma lets you modify JSON/CSV files using simple JavaScript functions - perfect for data cleaning, enrichment, and transformation.
 
-- Data transformation and enrichment
-- JSON processing automation
-- File batch processing
-- ETL pipelines without the complexity
-
-## ✨ Features
-
-- 📁 **Simple CLI commands** to create and run workflows
-- 🔄 **Automatic file handling** for JSON, CSV, and text
-- 🧩 **Customizable transforms** with plain JavaScript
-- 🔍 **Smart file tracking** to avoid duplicate processing
-- 📊 **Standard folder structure** for all your data projects
-- ⚙️ **Module compatibility** with both CommonJS and ES Modules projects
-
-## 📦 Installation
+## Show Me! 👀
 
 ```bash
-# Install globally
-npm install -g locwfm
+# Install
+npm install -g Transforma
 
-# Verify installation
-wfm --version
-```
+# Create a project
+ft new clean-data
 
-## 🏃‍♂️ Quick Start: JSON Processing
+# Drop your files in clean-data/data/input/
+# Edit clean-data/transform.js:
 
-```bash
-# Create a new workflow
-wfm create -n json-processor
-
-# Add your JSON files
-cp your-data.json json-processor/data/input/
-
-# Run the workflow
-wfm run -c json-processor/config/workflow.json
-```
-
-That's it! Your processed data will be in the `json-processor/data/output` directory.
-
-> **Note**: LocalWFM automatically detects whether your project uses CommonJS or ES Modules and creates the appropriate template files.
-
-## 🛠️ Customizing Your JSON Workflow
-
-### 1. Create your workflow
-
-```bash
-wfm create -n json-processor
-```
-
-### 2. Edit the transform script
-
-Open `json-processor/scripts/transform.js` and customize the transformation:
-
-```javascript
-function step1(content, options) {
-  // Add timestamps and additional data
-  if (typeof content === "object" && content !== null) {
-    return {
-      ...content,
-      processed_at: new Date().toISOString(),
-      environment: process.env.NODE_ENV || "development",
-      metadata: {
-        processed_by: "LocalWFM",
-        version: "1.0.0"
-      }
-    };
-  }
-  return content;
+function transform(data) {
+  // Remove sensitive fields and add metadata
+  const { password, ssn, ...safe } = data;
+  return {
+    ...safe,
+    cleanedAt: new Date().toISOString()
+  };
 }
 
-module.exports = {step1, default: step1};
+# Process your files
+ft run clean-data
 ```
 
-### 3. Run your workflow
+That's it! Find your processed files in `clean-data/data/output/` 🎉
 
-```bash
-wfm run -c json-processor/config/workflow.json
+## Real-World Examples 🌟
+
+### 1. Clean Customer Data
+```javascript
+// transform.js - Remove sensitive data and format fields
+function transform(customer) {
+  return {
+    id: customer.id,
+    name: customer.name.toLowerCase().trim(),
+    email: customer.email.toLowerCase(),
+    // Remove credit card, SSN, etc
+    lastUpdated: new Date().toISOString()
+  };
+}
 ```
 
-### 4. Process files repeatedly with the force option
+### 2. Validate Product Data
+```javascript
+// transform.js - Ensure all required fields exist
+function transform(product) {
+  // Skip invalid products
+  if (!product.sku || !product.price) {
+    console.warn(`Skipping invalid product: ${product.id}`);
+    return null;  // Returning null skips this item
+  }
 
-```bash
-wfm run -c json-processor/config/workflow.json -f
+  return {
+    ...product,
+    price: Number(product.price), // Convert to number
+    inStock: Boolean(product.inventory > 0)
+  };
+}
 ```
 
-## 📂 Workflow Structure
+### 3. Format for Import
+```javascript
+// transform.js - Prepare data for system import
+function transform(record) {
+  return {
+    externalId: `LEGACY-${record.old_id}`,
+    fullName: `${record.first} ${record.last}`,
+    tags: record.categories?.split(',').map(t => t.trim()) || [],
+    status: record.active ? 'ACTIVE' : 'INACTIVE'
+  };
+}
+```
+
+## Project Layout 📁
 
 ```
-json-processor/
-  ├── config/
-  │   └── workflow.json    (Workflow configuration)
-  ├── data/
-  │   ├── input/           (Place JSON files here)
-  │   └── output/          (Processed JSON appears here)
-  ├── scripts/
-  │   └── transform.js     (Your custom transformation code)
-  └── wfconfig.js          (Advanced configuration options)
+clean-data/              # Your project folder
+├── data/
+│   ├── input/          # Put your files here
+│   └── output/         # Get processed files here
+├── transform.js        # Your transformation code
+└── config.json        # Optional settings
 ```
 
-## 🛠️ Workflow Configuration
+## Features ✨
 
-The `workflow.json` file defines your processing pipeline:
+- 🚀 Start in 30 seconds
+- ✍️ Transform with plain JavaScript
+- 📁 Handles JSON & CSV files
+- 🔄 Process files in batches
+- 🎯 Skip already processed files
+- 🛠️ Optional multi-step pipelines
 
-```json
+## Advanced Usage 🔧
+
+### Multiple Steps
+```javascript
+// config.json - Chain multiple transformations
 {
-  "name": "json-processor",
-  "description": "Process JSON files",
-  "version": "1.0.0",
-  "input_dir": "data/input",
-  "output_dir": "data/output",
   "steps": [
     {
-      "name": "transform",
-      "type": "transform",
-      "function": "scripts/transform.js",
-      "options": {
-        "addTimestamp": true,
-        "environment": "production"
-      },
-      "skip_existing": true
+      "name": "validate",     // First validate
+      "file": "validate.js"
+    },
+    {
+      "name": "transform",    // Then transform
+      "file": "transform.js"
     }
   ]
 }
 ```
 
-## 🔍 Advanced Features
-
-- **Skip already processed files**: Set `skip_existing: true` in your step config
-- **Force reprocessing**: Use the `-f` flag when running the workflow
-- **Custom options**: Pass options to your transform functions through the workflow config
-- **Multiple steps**: Chain multiple transform steps for complex processing
-
-## 📚 Examples
-
-### Enriching JSON data
-
-```javascript
-function step1(content, options) {
-  // Add metadata to each item in an array
-  if (Array.isArray(content)) {
-    return content.map((item) => ({
-      ...item,
-      enriched: true,
-      processed_at: new Date().toISOString(),
-      source: options.source || "unknown"
-    }));
-  }
-
-  // Process a single JSON object
-  return {
-    ...content,
-    enriched: true,
-    processed_at: new Date().toISOString()
-  };
-}
-
-module.exports = {step1};
+### Force Reprocessing
+```bash
+ft run clean-data --force  # Process all files again
 ```
 
-## 📄 License
+## Need Help? 🆘
+
+- 📘 Docs: [link]
+- 🐛 Issues: [link]
+- 💡 Ideas: [link]
+
+## License 📄
 
 MIT
