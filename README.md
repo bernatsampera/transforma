@@ -1,138 +1,105 @@
 # 🔄 Transforma
 
-**Transform your files with simple JavaScript - no setup required**
+**Effortless Data Transformation with JavaScript**
 
-![npm](https://img.shields.io/npm/v/Transforma)
+![npm](https://img.shields.io/npm/v/transforma)
 ![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)
 
-## In One Sentence 🎯
+## 🚀 What is Transforma?
+Transforma simplifies data processing by applying JavaScript functions to JSON/CSV files. It skips files that have already been processed, saving time and resources.
 
-Transforma lets you modify JSON/CSV files using simple JavaScript functions - perfect for data cleaning, enrichment, and transformation.
-
-## Show Me! 👀
+## ⚡ Quick Start
 
 ```bash
 # Install
 npm install -g transforma
 
 # Create a project
-transforma new clean-data
-
-# Drop your files in clean-data/data/input/
-# Edit clean-data/transform.ts:
-
-function transform(data) {
-  // Remove sensitive fields and add metadata
-  const { password, ssn, ...safe } = data;
-  return {
-    ...safe,
-    cleanedAt: new Date().toISOString()
-  };
-}
-
-# Process your files
-transforma run clean-data
+transforma new my-project
 ```
 
-That's it! Find your processed files in `clean-data/data/output/` 🎉
+### 📥 Input Example
+Place JSON files inside `my-project/data/input/`.
 
-## Real-World Examples 🌟
-
-### 1. Clean Customer Data
-```javascript
-// transform.ts - Remove sensitive data and format fields
-function transform(customer) {
-  return {
-    id: customer.id,
-    name: customer.name.toLowerCase().trim(),
-    email: customer.email.toLowerCase(),
-    // Remove credit card, SSN, etc
-    lastUpdated: new Date().toISOString()
-  };
-}
-```
-
-### 2. Validate Product Data
-```javascript
-// transform.ts - Ensure all required fields exist
-function transform(product) {
-  // Skip invalid products
-  if (!product.sku || !product.price) {
-    console.warn(`Skipping invalid product: ${product.id}`);
-    return null;  // Returning null skips this item
-  }
-
-  return {
-    ...product,
-    price: Number(product.price), // Convert to number
-    inStock: Boolean(product.inventory > 0)
-  };
-}
-```
-
-### 3. Format for Import
-```javascript
-// transform.ts - Prepare data for system import
-function transform(record) {
-  return {
-    externalId: `LEGACY-${record.old_id}`,
-    fullName: `${record.first} ${record.last}`,
-    tags: record.categories?.split(',').map(t => t.trim()) || [],
-    status: record.active ? 'ACTIVE' : 'INACTIVE'
-  };
-}
-```
-
-## Project Layout 📁
-
-```
-clean-data/              # Your project folder
-├── data/
-│   ├── input/          # Put your files here
-│   └── output/         # Get processed files here
-├── transform.ts        # Your transformation code
-└── config.json        # Optional settings
-```
-
-## Features ✨
-
-- 🚀 Start in 30 seconds
-- ✍️ Transform with plain JavaScript
-- 📁 Handles JSON & CSV files
-- 🔄 Process files in batches
-- 🎯 Skip already processed files
-- 🛠️ Optional multi-step pipelines
-
-## Advanced Usage 🔧
-
-### Multiple Steps
-```javascript
-// config.json - Chain multiple transformations
+#### Single JSON File (`data/input/user.json`)
+```json
 {
-  "steps": [
-    {
-      "name": "validate",     // First validate
-      "file": "validate.js"
-    },
-    {
-      "name": "transform",    // Then transform
-      "file": "transform.ts"
-    }
-  ]
+  "id": 1,
+  "name": "John Doe",
+  "email": "john@example.com"
 }
 ```
 
-### Force Reprocessing
-```bash
-transforma run clean-data --force  # Process all files again
+#### Multiple JSON Files (`data/input/`)
+- `data/input/user1.json`
+  ```json
+  { "id": 1, "name": "Alice" }
+  ```
+- `data/input/user2.json`
+  ```json
+  { "id": 2, "name": "Bob" }
+  ```
+
+### ✍️ Define Your Transformation
+Edit `my-project/transform.ts`:
+```javascript
+function transform(data) {
+  return {
+    ...data,
+    processedAt: new Date().toISOString()
+  };
+}
 ```
 
-## Need Help? 🆘
+### ▶️ Run Transformation
+```bash
+transforma run my-project
+```
 
-- 📘 Docs: [link]
-- 🐛 Issues: [link]
-- 💡 Ideas: [link]
+### 📤 Output Example
+Processed files appear in `my-project/data/output/`.
 
-## License 📄
+#### Output for Single JSON (`data/output/user.json`)
+```json
+{
+  "id": 1,
+  "name": "John Doe",
+  "email": "john@example.com",
+  "processedAt": "2025-03-29T12:00:00.000Z"
+}
+```
 
+#### Output for Multiple JSONs (`data/output/`)
+- `data/output/user1.json`
+  ```json
+  { "id": 1, "name": "Alice", "processedAt": "2025-03-29T12:00:00.000Z" }
+  ```
+- `data/output/user2.json`
+  ```json
+  { "id": 2, "name": "Bob", "processedAt": "2025-03-29T12:00:00.000Z" }
+  ```
+
+## 📂 Project Structure
+```
+my-project/
+├── data/
+│   ├── input/      # Source files
+│   └── output/     # Processed files
+├── transform.ts    # Your transformation logic
+└── config.json     # Optional settings
+```
+
+## 🔧 Key Features
+- **Fast & Simple**: No setup, just write JavaScript.
+- **Skip Processed Files**: Avoid redundant work.
+- **Batch Processing**: Handle large datasets efficiently.
+- **Flexible Pipelines**: Chain multiple transformation steps.
+
+## ⏭️ Next Steps
+- Add more transformations in `transform.ts`
+- Customize `config.json` for multi-step processing
+- Use `transforma run my-project --force` to reprocess all files
+
+## 📄 License
 MIT
+

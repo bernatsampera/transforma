@@ -9,7 +9,7 @@ const program = new Command();
 
 // Define the CLI
 program
-  .name("ft")
+  .name("transforma")
   .description(
     "Local Workflow Manager - Create and run local data processing workflows"
   )
