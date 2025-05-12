@@ -13,14 +13,14 @@ program
   .description(
     "Local Workflow Manager - Create and run local data processing workflows"
   )
-  .version("1.0.0");
+  .version("1.2.0");
 
 // Add commands
 addCreateCommand(program);
 addRunCommand(program);
 
 // Debug: Log arguments
-console.log('Process arguments:', process.argv);
+// console.log('Process arguments:', process.argv);
 
 // Show help by default if no arguments
 if (process.argv.length < 3) {

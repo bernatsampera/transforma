@@ -8,7 +8,7 @@
  * @param {object} options - Options from workflow config
  * @returns {any} - The transformed data
  */
-function transform(content, options) {
+function transform(content, options, fileName) {
   // Just return the content unchanged
   // Replace this with your own transformation logic
   return content;

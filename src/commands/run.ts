@@ -84,7 +84,8 @@ const applyBuiltInFunction = (
 async function executeTransformScript(
   scriptPath: string,
   content: any,
-  options: Record<string, any> = {}
+  options: Record<string, any> = {},
+  filePath: string
 ): Promise<any> {
   try {
     // Create a temporary directory for our executor script and data
@@ -98,6 +99,10 @@ async function executeTransformScript(
     // Write the options to a temp file
     const optionsPath = path.join(tmpDir, "options.json");
     fs.writeJsonSync(optionsPath, options, {spaces: 2});
+
+    // Write the filePath to a temp file
+    const filePathPath = path.join(tmpDir, "filePath.json");
+    fs.writeJsonSync(filePathPath, filePath, {spaces: 2});
 
     // Create a small executor script that will run the transform
     const executorPath = path.join(tmpDir, "executor.ts");
@@ -118,22 +123,29 @@ async function run() {
     };
     
     // Read input content and options
-    const content = JSON.parse(readFileSync(process.argv[2], 'utf8'));
-    const options = JSON.parse(readFileSync(process.argv[3], 'utf8')) as TransformOptions;
+    const content = JSON.parse(readFileSync(process.argv[2], "utf8"));
+    const options = JSON.parse(
+      readFileSync(process.argv[3], "utf8")
+    ) as TransformOptions;
     const scriptPath = process.argv[4];
-    
+
+    const inputFilePath = JSON.parse(
+      readFileSync(process.argv[5], "utf8")
+    ) as string;
+
     // Dynamically import the transform script
     const transformModule = await import(scriptPath);
-    
+
     // Get the transform function
-    const transformFn = transformModule.default || transformModule.transform || transformModule;
+    const transformFn =
+      transformModule.default || transformModule.transform || transformModule;
     
     // Execute the transform
     let result;
     if (typeof transformFn === 'function') {
-      result = await transformFn(content, options);
+      result = await transformFn(content, options, inputFilePath);
     } else if (transformFn && typeof transformFn.transform === 'function') {
-      result = await transformFn.transform(content, options);
+      result = await transformFn.transform(content, options, inputFilePath);
     } else {
       throw new Error('No valid transform function found');
     }
@@ -164,7 +176,8 @@ run().catch(err => {
       executorPath,
       contentPath,
       optionsPath,
-      scriptAbsPath
+      scriptAbsPath,
+      filePathPath
     ]);
 
     let stdout = "";
@@ -224,7 +237,12 @@ const loadWorkflowCustomConfig = async (workflowDir: string): Promise<any> => {
       try {
         // Use the same child process approach to load wfconfig.js
         const content = {}; // Empty content for wfconfig
-        const result = await executeTransformScript(configPath, content);
+        const result = await executeTransformScript(
+          configPath,
+          content,
+          {},
+          ""
+        );
         log.info(`Loaded custom workflow configuration from ${configPath}`);
         return result;
       } catch (error) {
@@ -308,7 +326,7 @@ const runWorkflowStep = async (
 
     // Parse input file
     const content = parseFileContent(filePath, fileExtension);
-
+    console.log("filePath", filePath);
     // Process the content based on step type
     let result;
     if (step.type === "built-in") {
@@ -316,7 +334,12 @@ const runWorkflowStep = async (
     } else if (step.type === "transform") {
       // Resolve the transform script path relative to the workflow directory
       const scriptPath = path.resolve(workflowDir, step.function);
-      result = await executeTransformScript(scriptPath, content, step.options || {});
+      result = await executeTransformScript(
+        scriptPath,
+        content,
+        step.options || {},
+        filePath
+      );
     } else {
       throw new Error(`Unsupported step type: ${step.type}`);
     }
@@ -362,9 +385,7 @@ const parseFileContent = (filePath: string, fileExtension: string): any => {
         return content;
     }
   } catch (error) {
-    log.error(
-      `Failed to parse file ${filePath}: ${(error as Error).message}`
-    );
+    log.error(`Failed to parse file ${filePath}: ${(error as Error).message}`);
     throw error;
   }
 };
@@ -440,7 +461,13 @@ export const runWorkflow = async (options: RunOptions): Promise<void> => {
 
         // Run each step in sequence
         for (const step of config.steps) {
-          await runWorkflowStep(filePath, step, workflowDir, outputDir, customConfig);
+          await runWorkflowStep(
+            filePath,
+            step,
+            workflowDir,
+            outputDir,
+            customConfig
+          );
         }
       } catch (error) {
         log.error(`Failed to process file: ${filePath}`, error as Error);
@@ -464,7 +491,10 @@ export const addRunCommand = (program: Command): void => {
   program
     .command("run")
     .description("Run a workflow")
-    .requiredOption("-c, --config <path>", "Path to workflow configuration file")
+    .requiredOption(
+      "-c, --config <path>",
+      "Path to workflow configuration file"
+    )
     .option("-f, --force", "Force overwrite of existing output files")
     .action(async (options: RunOptions) => {
       try {

@@ -16,7 +16,11 @@ interface TransformOptions {
  * @param options - Optional parameters from workflow config
  * @returns - The transformed data
  */
-export function transform(content: any, options: TransformOptions = {}): any {
+export function transform(
+  content: any,
+  options: TransformOptions = {},
+  fileName: string
+): any {
   // Just return the content unchanged
   // Replace this with your own transformation logic
   return content;
